@@ -1,27 +1,23 @@
 terraform {
-  required_version = "~> 1.5"
-
   required_providers {
     google = {
       source  = "hashicorp/google"
       version = "~> 5.0"
     }
-    bindplane = {
-      source  = "observiq/bindplane"
-      version = "~> 1.7"
-    }
     random = {
       source  = "hashicorp/random"
+      version = "~> 3.5"
     }
   }
+  required_version = ">= 1.4.0"
 }
 
 provider "google" {
-  project = "white-outlook-480705-b1"
-  region  = "us-central1"
-  zone    = "us-central1-a"
+  project = var.project_id
+  region  = var.region
+  zone    = var.zone
 }
 
-resource "random_id" "suffix" {
-  byte_length = 3
-}
+variable "project_id" {}
+variable "region" {}
+variable "zone" {}
