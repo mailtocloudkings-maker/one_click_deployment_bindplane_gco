@@ -1,0 +1,60 @@
+version: "3"
+
+volumes:
+  bindplane:
+  prometheus:
+
+services:
+  bindplane:
+    container_name: bindplane-server
+    restart: always
+    image: ghcr.io/observiq/bindplane-ee:1.96.8
+    ports:
+      - "3001:3001"
+    environment:
+      - BINDPLANE_LICENSE=H4sIAAAAAAAA/2RWCZPauBL+K3lOvXqpZEhJ8oHFq9RmLojJwGQ4hmO0lZUlazCYYwcDhmT2t29122J3a6sSjaw+1MfXn/jhpNppOIzVdeDGbo27vql5LHRrUnu8FgTaM75HNA8S58LJj5vEaTit9fo5g+/1YZW8OA3nMsvTZZK/pAvnwkmKTfoi83S9AseUBTVCa4wMCGngv6lz4WzT55XMdy/gTThCFDzs8zfvPgpRUFItsRCFNkIUiRaiUEY1QRA8wJFiYkeIq+agA2Idxm+FKAwae7kQhZTteQB/wQ/xakLsiBuDsaRg4C7gWtA3HngG0QtIVQcMXCGKMITbOSwS/J6XmKNZ4whOPa0uICTXhS8qFXhnDVBzhRDiP7Cr34M/H1zVYZegq7F6L4Qcg4KHp3Cc+Lh9LdMUBYX8uA+rgcglKGnv/3CKCWKoIFH0na2BqttFgziBvKl6BDHEZ+p2kckJNFUNymRCuDWhkEidqcPK/0yeWuBE2mYoUhVmR1jpGmOW92cZaJm4CmRHXJ5Al5J4sIY8IWLu2l3of/vQB0tI30C2ISw6+WZ7QFXZaVAK/gAZx342hMgRN9iyW3Rmath9cJ78AqpwSsgr9iXAMtWrthShej030v8dPMEVhNnwuMRefT5+wLDVAVv8ABJz/Rb62sE2YFzgRGIEPxOsJmYDNeAMLg9CUFH6f1gQv267JI0Qe2IbiyBDW+p+af18mgOGpGeBU0ISAjTa5sk1ltbWHndxWcsfsEW8QIk4FQIHLU4sMIx7AsQ7MLJLmWZOw9ku5FE+yyyTn+V5pD+q9dK5cLTMpdNwkmN7M72OgmgeHbvsgXVYdLobLE7d0STv3kRe50hn05sH/24wYdOb3rI7eDhMbxZs2o+20arnq9YwvU/bX2LGV3FrmN5dt/ea+ZlKoyBaNLe6leXTce8oR1uUqaWexcssmIx7m5j57fLuy6JPplf9ea85fOxddefdL72hP+rSrNdZDP3RIBtE6SGdjmcHOW7PdCvbxynGXHTmk7xzc5t35lfDzs1lUP6/kqg/ojM5OkB8J8ma/mSkZ3GrmD20/hHXbsJ4Dvpy3B2qZTaLr6NgumxuFRtuoyWdJbfN1XTkE3WMgs71IY1HTe9x3M3UqpPezy9LnebVMWabbOL2TtF8fbi7bueT8ex2Msq2yTDbTdnjSd/S60p2moyapwHzt0n/73dlO916PMbL5jaab5aTUXGajsmnqlvf/8Wy4ZkQE4VA7w+/X3za4xjzy+1HJFIEuh1HYxAz9C1PrT0OLlXIargN0WxkcRoCmPcdpAZPiPwZBxopHFBsLCQN4JTiACZDdIc8H6c4MUC75ctgoq+7cR/ZCT7RyhxsqCa8+K2as3LeSxIiX+Gb6lecGdAgGAK1w4afWIqSX/kb2NInOPVfCxsf5wkwzQbc8MUHCI3EkCX1cVg/WXKNWWGphSK9heVrgDljWXBU6RCcxpaKpPy2x6u2eBcsJTO/YNFW4AipVHabxRsh8KBuKx3rgRA7zWImxN7mRIPWytaZUJskxhwqyIPi0+CWnIevDLf6ITkXxVziq2O/uQZGlgH2hoX2MmyZ5BXBVJyn3Z/IduCGtWyqmJj0LStx/65i8PJ58N+DjRxYElbef899xIiNXwEQfxKYX6uHCqu9IzQ2qo2vMSIBeZEby58lG+IPBeROqe0I6PCJX2IN7jEyQEEd7RJ4tymiBLEVLv5CjbYJI5vS8LlqOBJwVaAd8VlSQt9xXv8MAAD//yr+B79oCQAA
+      - BINDPLANE_USERNAME=admin
+      - BINDPLANE_PASSWORD=test
+      - BINDPLANE_REMOTE_URL=http://${BINDPLANE_PUBLIC_IP}:3001
+      - BINDPLANE_SESSION_SECRET=e7f30a28-e09b-4fbb-a932-172670893276
+      - BINDPLANE_LOG_OUTPUT=stdout
+      - BINDPLANE_ACCEPT_EULA=true
+      - BINDPLANE_PROMETHEUS_ENABLE=true
+      - BINDPLANE_PROMETHEUS_ENABLE_REMOTE=true
+      - BINDPLANE_PROMETHEUS_HOST=prometheus
+      - BINDPLANE_PROMETHEUS_PORT=9090
+      - BINDPLANE_TRANSFORM_AGENT_ENABLE_REMOTE=true
+      - BINDPLANE_TRANSFORM_AGENT_REMOTE_AGENTS=transform:4568
+      - BINDPLANE_STORE_TYPE=postgres
+      - BINDPLANE_POSTGRES_HOST=postgres
+      - BINDPLANE_POSTGRES_PORT=5432
+      - BINDPLANE_POSTGRES_DATABASE=bindplane
+      - BINDPLANE_POSTGRES_USERNAME=admin
+      - BINDPLANE_POSTGRES_PASSWORD=test
+    depends_on:
+      - postgres
+      - prometheus
+      - transform
+
+  postgres:
+    container_name: bindplane-postgres
+    restart: always
+    image: postgres:16
+    environment:
+      - POSTGRES_DB=bindplane
+      - POSTGRES_USER=admin
+      - POSTGRES_PASSWORD=password*!#987
+    volumes:
+      - bindplane:/var/lib/postgresql/data
+
+  prometheus:
+    container_name: bindplane-prometheus
+    restart: always
+    image: ghcr.io/observiq/bindplane-prometheus:1.96.8
+    volumes:
+      - prometheus:/prometheus
+
+  transform:
+    container_name: bindplane-transform-agent
+    restart: always
+    image: ghcr.io/observiq/bindplane-transform-agent:1.96.8-bindplane
