@@ -1,0 +1,88 @@
+name: "One-Click BindPlane Deployment"
+
+on:
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    name: "Deploy BindPlane End-to-End"
+    runs-on: ubuntu-latest
+    environment: production
+
+    steps:
+      # 1️⃣ Checkout repo
+      - name: Checkout Repository
+        uses: actions/checkout@v3
+
+      # 2️⃣ Setup Terraform
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v2
+        with:
+          terraform_version: 1.7.7
+
+      # 3️⃣ Terraform Init
+      - name: Terraform Init
+        working-directory: terraform
+        run: terraform init
+
+      # 4️⃣ Terraform Plan
+      - name: Terraform Plan
+        working-directory: terraform
+        run: terraform plan -out=tfplan -input=false
+
+      # 5️⃣ Terraform Apply (Firewall + VM)
+      - name: Terraform Apply Firewall & VM
+        working-directory: terraform
+        run: terraform apply -auto-approve -input=false -target=google_compute_firewall.bindplane_fw -target=google_compute_instance.bindplane_vm
+
+      # 6️⃣ Wait for VM to be ready
+      - name: Wait for VM SSH
+        run: |
+          VM_IP=$(terraform -chdir=terraform output -raw bindplane_vm_ip)
+          echo "Waiting for VM $VM_IP to be SSH-ready..."
+          for i in {1..20}; do
+            nc -zv $VM_IP 22 && echo "SSH is ready!" && exit 0
+            echo "Waiting 15s..."
+            sleep 15
+          done
+          echo "VM SSH not ready after 5 minutes" && exit 1
+
+      # 7️⃣ Install BindPlane Server using Docker Compose
+      - name: Deploy BindPlane Server
+        run: |
+          VM_IP=$(terraform -chdir=terraform output -raw bindplane_vm_ip)
+          echo "Copying docker-compose.yml to VM..."
+          scp -o StrictHostKeyChecking=no docker/docker-compose.yml ubuntu@$VM_IP:/opt/bindplane/docker-compose.yml
+          echo "Installing Docker Compose services..."
+          ssh -o StrictHostKeyChecking=no ubuntu@$VM_IP "sudo mkdir -p /opt/bindplane && cd /opt/bindplane && sudo docker compose up -d"
+
+      # 8️⃣ Install BindPlane Agent
+      - name: Install BindPlane Agent
+        run: |
+          VM_IP=$(terraform -chdir=terraform output -raw bindplane_vm_ip)
+          ssh -o StrictHostKeyChecking=no ubuntu@$VM_IP "sudo sh -c \"\$(curl -fsSLL 'https://bdot.bindplane.com/v1.90.0/install_unix.sh')\" -e 'ws://$VM_IP:3001/v1/opamp' -s '01KF69KEJVDVG2RCTDKPTTDX1J' -v '1.90.0' -k 'configuration=logs,install_id=e1794847-3e65-4b8b-8a31-eabe29a9ffd2'"
+
+      # 9️⃣ Apply BindPlane Pipeline via Terraform
+      - name: Terraform Apply BindPlane Pipeline
+        working-directory: terraform
+        run: terraform apply -auto-approve -input=false -target=bindplane_source.host_metrics -target=bindplane_source.journald_logs -target=bindplane_processor.batch -target=bindplane_configuration.logs_config -target=bindplane_configuration.metrics_config
+
+      # 🔟 Apply GCS bucket
+      - name: Terraform Apply GCS Bucket
+        working-directory: terraform
+        run: terraform apply -auto-approve -input=false -target=google_storage_bucket.bindplane_bucket
+
+      # 1️⃣1️⃣ Apply GCO Dashboard
+      - name: Terraform Apply GCO Dashboard
+        working-directory: terraform
+        run: terraform apply -auto-approve -input=false -target=google_monitoring_dashboard.bindplane_dashboard
+
+      # 1️⃣2️⃣ Apply GCO Alert
+      - name: Terraform Apply GCO Alert
+        working-directory: terraform
+        run: terraform apply -auto-approve -input=false -target=google_monitoring_alert_policy.bindplane_alert
+
+      # 1️⃣3️⃣ Output resources
+      - name: Terraform Outputs
+        working-directory: terraform
+        run: terraform output
